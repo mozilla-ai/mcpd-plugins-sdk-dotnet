@@ -94,6 +94,41 @@ The `BasePlugin` class provides default implementations for all plugin methods. 
 | `GetMetadata()` | Returns empty (should be overridden) |
 | `GetCapabilities()` | Returns empty (should be overridden) |
 
+### Modifying Requests
+
+Plugins can modify incoming HTTP requests by setting the `ModifiedRequest` field in the returned `HTTPResponse`. This allows plugins to transform requests before they reach downstream handlers:
+
+```csharp
+public override Task<HTTPResponse> HandleRequest(HTTPRequest request, Grpc.Core.ServerCallContext context)
+{
+    // Create a modified version of the request.
+    var modifiedRequest = new HTTPRequest
+    {
+        Method = request.Method,
+        Url = request.Url,
+        Path = request.Path,
+        Body = request.Body,
+        RemoteAddr = request.RemoteAddr,
+        RequestUri = request.RequestUri
+    };
+
+    // Copy and modify headers.
+    foreach (var header in request.Headers)
+    {
+        modifiedRequest.Headers.Add(header.Key, header.Value);
+    }
+    modifiedRequest.Headers["X-Custom-Header"] = "added-by-plugin";
+
+    // Return response with modified request.
+    return Task.FromResult(new HTTPResponse
+    {
+        Continue = true,
+        StatusCode = 0,
+        ModifiedRequest = modifiedRequest
+    });
+}
+```
+
 ## Running Your Plugin
 
 Build and run your plugin:
@@ -113,7 +148,7 @@ dotnet run -- --address localhost:50051 --network tcp
 
 The SDK automatically downloads proto definitions from [mcpd-proto](https://github.com/mozilla-ai/mcpd-proto) at build time.
 
-Current proto version: **v0.0.2**
+Current proto version: **v0.0.3**
 
 | Version Type | Description |
 |--------------|-------------|

@@ -4,7 +4,7 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <ProtoVersion>0.0.2</ProtoVersion>
+    <ProtoVersion>0.0.3</ProtoVersion>
 
     <PackageId>MozillaAI.Mcpd.Plugins.Sdk</PackageId>
     <Version>0.0.1</Version>

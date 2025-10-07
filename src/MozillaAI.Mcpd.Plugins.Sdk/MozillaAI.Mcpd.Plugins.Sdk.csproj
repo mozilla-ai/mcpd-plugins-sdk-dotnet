@@ -13,6 +13,7 @@
     <Description>.NET SDK for developing mcpd middleware plugins</Description>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/mozilla-ai/mcpd-plugins-sdk-dotnet</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/mozilla-ai/mcpd-plugins-sdk-dotnet</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>mcpd;grpc;middleware;plugin</PackageTags>
@@ -27,6 +28,10 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="/" />
   </ItemGroup>
 
   <ItemGroup>

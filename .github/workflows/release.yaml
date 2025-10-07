@@ -46,10 +46,10 @@ jobs:
           dotnet-version: '9.0.x'
 
       - name: Restore dependencies
-        run: dotnet restore
+        run: dotnet restore src/MozillaAI.Mcpd.Plugins.Sdk/MozillaAI.Mcpd.Plugins.Sdk.csproj
 
       - name: Build
-        run: dotnet build --configuration Release --no-restore
+        run: dotnet build src/MozillaAI.Mcpd.Plugins.Sdk/MozillaAI.Mcpd.Plugins.Sdk.csproj --configuration Release --no-restore
 
       - name: Pack
         run: dotnet pack src/MozillaAI.Mcpd.Plugins.Sdk/MozillaAI.Mcpd.Plugins.Sdk.csproj --configuration Release --no-build --output ./artifacts

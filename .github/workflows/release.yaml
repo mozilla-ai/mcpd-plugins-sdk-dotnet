@@ -1,0 +1,66 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (e.g. 0.0.1)"
+        required: true
+      dry-run:
+        description: "Dry run (skip NuGet push)"
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  publish:
+    name: Build and publish to NuGet
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Checkout release tag
+        run: |
+          git fetch --tags
+          TAG="${{ github.event.release.tag_name || github.event.inputs.tag }}"
+          if [ -z "$TAG" ]; then
+            echo "Error: No tag provided in release event or workflow_dispatch input"
+            exit 1
+          fi
+          echo "Checking out tag $TAG"
+          git checkout "$TAG"
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@d4c94342e560b34958eacfc5d055d21461ed1c5d # v5.0.0
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Pack
+        run: dotnet pack src/MozillaAI.Mcpd.Plugins.Sdk/MozillaAI.Mcpd.Plugins.Sdk.csproj --configuration Release --no-build --output ./artifacts
+
+      - name: NuGet login (OIDC → temp API key)
+        if: ${{ !inputs.dry-run }}
+        uses: NuGet/login@v1
+        id: nuget-login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: Push to NuGet
+        if: ${{ !inputs.dry-run }}
+        run: dotnet nuget push ./artifacts/*.nupkg --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate

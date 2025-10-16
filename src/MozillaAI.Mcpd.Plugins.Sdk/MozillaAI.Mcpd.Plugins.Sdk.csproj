@@ -7,7 +7,7 @@
     <ProtoVersion>0.0.3</ProtoVersion>
 
     <PackageId>MozillaAI.Mcpd.Plugins.Sdk</PackageId>
-    <Version>0.0.3</Version>
+    <Version>0.0.4</Version>
     <Authors>Mozilla AI</Authors>
     <Company>Mozilla AI</Company>
     <Description>.NET SDK for developing mcpd middleware plugins</Description>

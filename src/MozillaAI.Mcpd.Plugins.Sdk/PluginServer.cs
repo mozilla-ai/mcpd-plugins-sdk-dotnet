@@ -4,8 +4,8 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Console;
 
 namespace MozillaAI.Mcpd.Plugins.V1;
 
@@ -31,10 +31,11 @@ public static class PluginServer
     /// </summary>
     /// <typeparam name="T">The plugin implementation type that inherits from Plugin.PluginBase.</typeparam>
     /// <param name="args">Command-line arguments.</param>
+    /// <param name="logger">Optional logger instance. If null, a default console logger is created.</param>
     /// <returns>Exit code (0 for success, 1 for error).</returns>
-    public static async Task<int> Serve<T>(string[] args) where T : Plugin.PluginBase, new()
+    public static async Task<int> Serve<T>(string[] args, ILogger? logger = null) where T : Plugin.PluginBase, new()
     {
-        return await Serve(new T(), args);
+        return await Serve(new T(), args, logger);
     }
 
     /// <summary>
@@ -42,9 +43,26 @@ public static class PluginServer
     /// </summary>
     /// <param name="implementation">The plugin implementation instance.</param>
     /// <param name="args">Command-line arguments.</param>
+    /// <param name="logger">Optional logger instance. If null, a default console logger is created.</param>
     /// <returns>Exit code (0 for success, 1 for error).</returns>
-    public static async Task<int> Serve(Plugin.PluginBase implementation, string[] args)
+    public static async Task<int> Serve(Plugin.PluginBase implementation, string[] args, ILogger? logger = null)
     {
+        // Create default console logger if none provided.
+        logger ??= LoggerFactory.Create(builder =>
+        {
+            builder.AddConsole(options => options.FormatterName = "mcpd");
+            builder.AddConsoleFormatter<McpdLogFormatter, ConsoleFormatterOptions>();
+            builder.AddFilter("Microsoft.AspNetCore", LogLevel.Warning);
+            builder.AddFilter("Microsoft.Extensions", LogLevel.Warning);
+            builder.AddFilter("Microsoft.Hosting", LogLevel.Warning);
+        }).CreateLogger(implementation.GetType());
+
+        // Provide logger to BasePlugin implementations.
+        if (implementation is BasePlugin basePlugin)
+        {
+            basePlugin.SetLogger(logger);
+        }
+
         var addressOption = new Option<string>(
             name: "--address",
             description: "gRPC address (socket path for unix, host:port for tcp)")
@@ -63,27 +81,25 @@ public static class PluginServer
             networkOption
         };
 
-        rootCommand.SetHandler(async (address, network) =>
-        {
-            await RunServer(implementation, address, network);
-        }, addressOption, networkOption);
+        rootCommand.SetHandler(async (address, network) => await RunServer(implementation, address, network, logger), addressOption, networkOption);
 
         return await rootCommand.InvokeAsync(args);
     }
 
-    private static async Task RunServer(Plugin.PluginBase implementation, string address, string network)
+    private static async Task RunServer(Plugin.PluginBase implementation, string address, string network, ILogger logger)
     {
         var builder = WebApplication.CreateSlimBuilder();
 
-        // Suppress ASP.NET Core diagnostic logs but allow plugin logs.
+        // Suppress ASP.NET Core diagnostic logs.
         builder.Logging.ClearProviders();
-        builder.Logging.AddConsole();
+        builder.Logging.AddConsole(options => options.FormatterName = "mcpd");
+        builder.Logging.AddConsoleFormatter<McpdLogFormatter, ConsoleFormatterOptions>();
         builder.Logging.AddFilter("Microsoft.AspNetCore", LogLevel.Warning);
         builder.Logging.AddFilter("Microsoft.Extensions", LogLevel.Warning);
         builder.Logging.AddFilter("Microsoft.Hosting", LogLevel.Warning);
 
         // Configure Kestrel.
-        builder.WebHost.ConfigureKestrel((context, serverOptions) =>
+        builder.WebHost.ConfigureKestrel((_, serverOptions) =>
         {
             if (network.Equals("unix", StringComparison.OrdinalIgnoreCase))
             {
@@ -129,7 +145,8 @@ public static class PluginServer
         // Map gRPC service.
         app.MapGrpcService<PluginServiceAdapter>();
 
-        Console.WriteLine($"Plugin server listening on {network} {address}");
+        logger.LogInformation("Plugin server listening on {Network} {Address}", network, address);
+
 
         try
         {
@@ -152,16 +169,9 @@ public static class PluginServer
     {
         private readonly Plugin.PluginBase _implementation;
 
-        public PluginServiceAdapter(Plugin.PluginBase implementation, ILoggerFactory loggerFactory)
+        public PluginServiceAdapter(Plugin.PluginBase implementation)
         {
             _implementation = implementation;
-
-            // Provide logger to BasePlugin implementations.
-            if (_implementation is BasePlugin basePlugin)
-            {
-                var logger = loggerFactory.CreateLogger(_implementation.GetType());
-                basePlugin.SetLogger(logger);
-            }
         }
 
         public override Task<Google.Protobuf.WellKnownTypes.Empty> Configure(PluginConfig request, Grpc.Core.ServerCallContext context)

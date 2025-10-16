@@ -132,7 +132,15 @@ public override Task<HTTPResponse> HandleRequest(HTTPRequest request, Grpc.Core.
 
 ### Logging
 
-Plugins that extend `BasePlugin` have access to an `ILogger` instance via the `Logger` property. This allows plugins to emit structured logs that appear in the host application's output.
+Plugins that extend `BasePlugin` have access to an `ILogger` instance via the `Logger` property. The SDK automatically provides a default logger that outputs logs in a format compatible with mcpd's log level inference:
+
+```
+[INFO] Plugin server listening on unix /var/...
+[WARN] Rate limit exceeded
+[ERROR] Failed to process request
+```
+
+This format allows mcpd to properly categorize log messages by severity.
 
 ```csharp
 using Microsoft.Extensions.Logging;
@@ -142,13 +150,13 @@ public class MyPlugin : BasePlugin
 {
     public override Task<Empty> Configure(PluginConfig request, Grpc.Core.ServerCallContext context)
     {
-        Logger?.LogInformation("Plugin configured with {Count} settings", request.Settings.Count);
+        Logger.LogInformation("Plugin configured with {Count} settings", request.Settings.Count);
         return Task.FromResult(new Empty());
     }
 
     public override Task<HTTPResponse> HandleRequest(HTTPRequest request, Grpc.Core.ServerCallContext context)
     {
-        Logger?.LogInformation("Processing request: {Method} {Path}", request.Method, request.Path);
+        Logger.LogInformation("Processing request: {Method} {Path}", request.Method, request.Path);
 
         // Your plugin logic here.
 
@@ -157,7 +165,20 @@ public class MyPlugin : BasePlugin
 }
 ```
 
-The SDK automatically suppresses ASP.NET Core framework logs at the Info level to reduce noise. Plugin logs at Info level and above will appear normally in the host application's output.
+For advanced scenarios, you can provide your own logger:
+
+```csharp
+var loggerFactory = LoggerFactory.Create(builder =>
+{
+    builder.AddJsonConsole();
+    builder.SetMinimumLevel(LogLevel.Debug);
+});
+var logger = loggerFactory.CreateLogger<MyPlugin>();
+
+return await PluginServer.Serve<MyPlugin>(args, logger);
+```
+
+The SDK automatically suppresses ASP.NET Core framework logs at the Info level to reduce noise.
 
 ## Running Your Plugin
 

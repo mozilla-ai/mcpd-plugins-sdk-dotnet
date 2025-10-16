@@ -1,5 +1,6 @@
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
+using Microsoft.Extensions.Logging;
 
 namespace MozillaAI.Mcpd.Plugins.V1;
 
@@ -44,6 +45,21 @@ namespace MozillaAI.Mcpd.Plugins.V1;
 /// </example>
 public class BasePlugin : Plugin.PluginBase
 {
+    /// <summary>
+    /// Logger instance for the plugin. Available after SetLogger is called by the SDK.
+    /// </summary>
+    protected ILogger? Logger { get; private set; }
+
+    /// <summary>
+    /// SetLogger is called by the SDK to provide a logger to the plugin.
+    /// Plugins can override this to perform additional setup with the logger.
+    /// </summary>
+    /// <param name="logger">The logger instance to use.</param>
+    public virtual void SetLogger(ILogger logger)
+    {
+        Logger = logger;
+    }
+
     /// <summary>
     /// Configure is a no-op by default.
     /// </summary>

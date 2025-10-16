@@ -80,6 +80,7 @@ public static class PluginServer
         builder.Logging.AddConsole();
         builder.Logging.AddFilter("Microsoft.AspNetCore", LogLevel.Warning);
         builder.Logging.AddFilter("Microsoft.Extensions", LogLevel.Warning);
+        builder.Logging.AddFilter("Microsoft.Hosting", LogLevel.Warning);
 
         // Configure Kestrel.
         builder.WebHost.ConfigureKestrel((context, serverOptions) =>

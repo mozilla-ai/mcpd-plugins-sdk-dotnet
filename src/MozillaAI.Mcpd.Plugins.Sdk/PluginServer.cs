@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace MozillaAI.Mcpd.Plugins.V1;
 
@@ -73,6 +74,12 @@ public static class PluginServer
     private static async Task RunServer(Plugin.PluginBase implementation, string address, string network)
     {
         var builder = WebApplication.CreateSlimBuilder();
+
+        // Suppress ASP.NET Core diagnostic logs but allow plugin logs.
+        builder.Logging.ClearProviders();
+        builder.Logging.AddConsole();
+        builder.Logging.AddFilter("Microsoft.AspNetCore", LogLevel.Warning);
+        builder.Logging.AddFilter("Microsoft.Extensions", LogLevel.Warning);
 
         // Configure Kestrel.
         builder.WebHost.ConfigureKestrel((context, serverOptions) =>
@@ -144,9 +151,16 @@ public static class PluginServer
     {
         private readonly Plugin.PluginBase _implementation;
 
-        public PluginServiceAdapter(Plugin.PluginBase implementation)
+        public PluginServiceAdapter(Plugin.PluginBase implementation, ILoggerFactory loggerFactory)
         {
             _implementation = implementation;
+
+            // Provide logger to BasePlugin implementations.
+            if (_implementation is BasePlugin basePlugin)
+            {
+                var logger = loggerFactory.CreateLogger(_implementation.GetType());
+                basePlugin.SetLogger(logger);
+            }
         }
 
         public override Task<Google.Protobuf.WellKnownTypes.Empty> Configure(PluginConfig request, Grpc.Core.ServerCallContext context)

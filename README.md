@@ -83,8 +83,8 @@ public class Program
 
 The `BasePlugin` class provides default implementations for all plugin methods. Override only the methods you need:
 
-| Method | Default Behavior |
-|--------|------------------|
+| Method/Property | Default Behavior |
+|-----------------|------------------|
 | `CheckHealth()` | Returns OK |
 | `CheckReady()` | Returns OK |
 | `Configure()` | No-op |
@@ -93,6 +93,7 @@ The `BasePlugin` class provides default implementations for all plugin methods. 
 | `HandleResponse()` | Pass through unchanged |
 | `GetMetadata()` | Returns empty (should be overridden) |
 | `GetCapabilities()` | Returns empty (should be overridden) |
+| `Logger` | Automatically provided ILogger instance for structured logging |
 
 ### Modifying Requests
 
@@ -128,6 +129,35 @@ public override Task<HTTPResponse> HandleRequest(HTTPRequest request, Grpc.Core.
     });
 }
 ```
+
+### Logging
+
+Plugins that extend `BasePlugin` have access to an `ILogger` instance via the `Logger` property. This allows plugins to emit structured logs that appear in the host application's output.
+
+```csharp
+using Microsoft.Extensions.Logging;
+using MozillaAI.Mcpd.Plugins.V1;
+
+public class MyPlugin : BasePlugin
+{
+    public override Task<Empty> Configure(PluginConfig request, Grpc.Core.ServerCallContext context)
+    {
+        Logger?.LogInformation("Plugin configured with {Count} settings", request.Settings.Count);
+        return Task.FromResult(new Empty());
+    }
+
+    public override Task<HTTPResponse> HandleRequest(HTTPRequest request, Grpc.Core.ServerCallContext context)
+    {
+        Logger?.LogInformation("Processing request: {Method} {Path}", request.Method, request.Path);
+
+        // Your plugin logic here.
+
+        return Task.FromResult(new HTTPResponse { Continue = true });
+    }
+}
+```
+
+The SDK automatically suppresses ASP.NET Core framework logs at the Info level to reduce noise. Plugin logs at Info level and above will appear normally in the host application's output.
 
 ## Running Your Plugin
 
@@ -176,7 +206,8 @@ mcpd-plugins-sdk-dotnet/
 └── examples/
     └── MyPlugin/
         ├── MyPlugin.csproj         # Example plugin project.
-        └── Program.cs              # Example plugin implementation.
+        ├── MyPlugin.cs             # Plugin implementation.
+        └── Program.cs              # Entry point.
 ```
 
 ## For SDK Maintainers

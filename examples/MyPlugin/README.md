@@ -37,7 +37,7 @@ dotnet run -- --address localhost:50051 --network tcp
 
 ## Code Structure
 
-The example consists of two classes:
+The example is organized into two files:
 
-- `MyPlugin`: Extends `BasePlugin` and overrides methods for metadata, capabilities, and request handling
-- `Program`: Entry point that starts the plugin server using `PluginServer.Serve<MyPlugin>()`
+- `MyPlugin.cs`: Contains the `MyPlugin` class that extends `BasePlugin` and implements the plugin logic
+- `Program.cs`: Entry point that starts the plugin server using `PluginServer.Serve<MyPlugin>()`

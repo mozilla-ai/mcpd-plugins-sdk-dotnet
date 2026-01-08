@@ -20,7 +20,7 @@ Or add it directly to your `.csproj` file:
 
 ```xml
 <ItemGroup>
-  <PackageReference Include="MozillaAI.Mcpd.Plugins.Sdk" Version="0.0.5" />
+  <PackageReference Include="MozillaAI.Mcpd.Plugins.Sdk" Version="0.0.6" />
 </ItemGroup>
 ```
 
